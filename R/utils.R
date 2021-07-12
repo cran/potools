@@ -15,41 +15,43 @@ get_directory = function(dir) {
 get_desc_data = function(dir) {
   desc_file <- file.path(dir, 'DESCRIPTION')
   if (!file.exists(desc_file)) {
-    stopf('%s is not a package (missing DESCRIPTION)', dir)
+    stopf('%s is not a package (missing DESCRIPTION)', normalizePath(dir))
   }
   desc_data <- read.dcf(desc_file, c('Package', 'Version'))
   if (nrow(desc_data) != 1L || anyNA(desc_data)) {
-    stopf('%s is not a package (missing Package and/or Version field in DESCRIPTION)', dir)
+    stopf('%s is not a package (missing Package and/or Version field in DESCRIPTION)', normalizePath(dir))
   }
   return(desc_data[1L, ])
 }
 
-# see ?tools::update_pkg_po
-SYSTEM_REQUIREMENTS = c('xgettext', 'msgmerge', 'msgfmt', 'msginit', 'msgconv')
+# msgmerge | msgmerge.R | run_msgmerge()
+# msgfmt   | msgmerge.R | run_msgfmt()
+# msginit  | msgmerge.R | tools:::en_quote()
+# msgconv  | msgmerge.R | tools:::en_quote()
+SYSTEM_REQUIREMENTS = c('msgmerge', 'msgfmt', 'msginit', 'msgconv')
 RTOOLS_URL = 'https://www.stats.ox.ac.uk/pub/Rtools/goodies/gettext-tools.zip'
 
 # nocov start. in principal, could do another GH action on an ill-equipped machine?
-check_sys_reqs = function() {
+check_potools_sys_reqs = function() {
   if (any(is_missing <- !nzchar(Sys.which(SYSTEM_REQUIREMENTS)))) {
     if (.Platform$OS.type == 'windows') {
       platform_msg = gettextf(
         'These tools are available as an Rtools goodie, check %s',
         RTOOLS_URL
       )
-    } else {
-      if (Sys.info()['sysname'] == 'Darwin') {
+    } else if (Sys.info()['sysname'] == 'Darwin') {
         platform_msg = gettext('These GNU tools are commonly available, try installing from brew or apt-get')
-      } else {
-        platform_msg = gettext(
-          'These GNU tools are commonly available from the Linux package manager for your system'
-        )
-      }
+    } else {
+      platform_msg = gettext(
+        'These GNU tools are commonly available from the Linux package manager for your system'
+      )
     }
-    stopf(
+    return(gettextf(
       'Missing (or not on PATH) system requirements %s.\n%s',
       toString(SYSTEM_REQUIREMENTS[is_missing]), platform_msg
-    )
+    ))
   }
+  return(TRUE)
 }
 # nocov end
 
@@ -118,4 +120,36 @@ escape_string = function(x) gsub('"', '\\"', encodeString(x), fixed = TRUE)
 safe_substring = function(text, first, last) {
   if (!length(first)) return(character())
   substring(text, first, last)
+}
+
+build_exclusion_ranges = function(starts, ends) {
+  all_counts = merge(
+    starts[ , .N, by = 'file'],
+    ends[ , .N, by = 'file'],
+    by = 'file', all = TRUE
+  )
+  setnafill(all_counts, fill=0L, cols = 2:3)
+  if (nrow(all_counts[N.x != N.y])) {
+    stopf(
+      "Invalid # notranslate start/end range(s):\n%s",
+      all_counts[N.x != N.y, toString(gettextf("File %s: %d start(s) / %d end(s)", file, N.x, N.y))]
+    )
+  }
+
+  ranges = starts[ends, on = c('file', 'line1'), roll = Inf, .(file, start = x.line1, end = i.line1)]
+  if (anyNA(ranges$start)) {
+    stopf(
+      "Invalid # notranslate start/end range(s):\n%s",
+      ranges[is.na(start), gettextf("Unmatched start/end pairs in files: %s", toString(unique(file)))]
+    )
+  }
+
+  ranges
+}
+
+get_lang_metadata = function(language) {
+  if (language %chin% .potools$KNOWN_LANGUAGES$code) {
+    return(.potools$KNOWN_LANGUAGES[.(language)])
+  }
+  update_metadata(language)
 }

@@ -54,8 +54,10 @@ test_that("translate_package works on a simple package", {
       # testing gettextf's ... arguments are skipped
       expect_all_match(readLines(file.path(pkg, pot_file)), "don't translate me", invert=TRUE, fixed=TRUE)
 
-      # Windows doesn't produce the en@quot translations at all
-      if (.Platform$OS.type != "windows") {
+      # Non-UTF-8 machines don't run en@quot translations by default.
+      #   Mostly applies to Windows, but can also apply to Unix
+      #   (e.g. r-devel-linux-x86_64-debian-clang on CRAN), #191
+      if (l10n_info()[["UTF-8"]]) {
         expect_match(pkg_files, "inst/po/en@quot/LC_MESSAGES/R-rMsg.mo", all = FALSE)
       }
     }
@@ -84,7 +86,7 @@ test_that("translate_package works on a simple package", {
       expect_match(zh_translations, "该起床了", all = FALSE)
     }
   )
-  expect_outputs(prompts, c("^---^", "^^"), fixed=TRUE)
+  expect_all_match(prompts, c("^---^", "^^"), fixed=TRUE)
 
   # all translations already done
   restore_package(
@@ -128,7 +130,7 @@ test_that("translate_package identifies potential translations in cat() calls", 
       )
     }
   )
-  expect_outputs(
+  expect_all_match(
     prompts,
     c(
       'cat(gettext("I warned you!"), fill=TRUE)',
@@ -137,7 +139,7 @@ test_that("translate_package identifies potential translations in cat() calls", 
     ),
     fixed=TRUE
   )
-  expect_outputs(
+  expect_all_match(
     prompts,
     c("shouldn't be translated", "Miss me"),
     fixed=TRUE, invert=TRUE
@@ -150,15 +152,22 @@ test_that('Unknown language flow works correctly', {
     tmp_conn = mock_translation('test-translate-package-r_msg-2.input'),
     {
       expect_messages(
-        translate_package(pkg, 'ar_SY'),
-        # TODO: why isn't "Did not match any known 'plural's" matching?
-        c('not a known language', 'Please file an issue'),
+        # earlier, did Arabic, but now that's a chosen language. switched two Welsh on the
+        #   (perhaps naive) judgment that it's unlikely to enter our scope anytime soon
+        #   and because there are still several (4) plural forms
+        translate_package(pkg, 'cy'),
+        c(
+          'not a known language', 'Please file an issue',
+          # NB: this test will fail if test_that is re-run on the same R session since potools'
+          #   internal state is altered for the remainder of the session... not sure it's worth changing...
+          "Did not match any known 'plural's"
+        ),
         fixed=TRUE
       )
     }
   )
   # also include coverage tests of incorrect templating in supplied translations
-  expect_outputs(
+  expect_all_match(
     prompts,
     c(
       'How would you refer to this language in English?',
@@ -167,6 +176,25 @@ test_that('Unknown language flow works correctly', {
       'received 4 unique templated arguments'
     ),
     fixed=TRUE
+  )
+
+  # whitespace matching for plural is lenient, #183
+  prompts = restore_package(
+    pkg <- test_package('r_msg'),
+    tmp_conn = mock_translation('test-translate-package-r_msg-5.input'),
+    {
+      expect_messages(
+        # Catalan -- romance language with >1 plural
+        translate_package(pkg, 'ca', diagnostics=NULL),
+        c("Did not match any known 'plural's"),
+        fixed=TRUE, invert=TRUE
+      )
+    }
+  )
+  expect_all_match(
+    prompts,
+    c("when n = 1", "when n is not 1"),
+    fixed = TRUE
   )
 })
 
@@ -207,7 +235,21 @@ test_that("Packages with src code work correctly", {
       expect_true("po/rSrcMsg.pot" %in% pkg_files)
       expect(
         any(grepl("inst/po/zh_CN/LC_MESSAGES/rSrcMsg.mo", pkg_files, fixed = TRUE)),
-        "Didn't find rSrcMsg.mo; found %s", toString(pkg_files)
+        sprintf(
+          "Didn't find rSrcMsg.mo; found %s.\n**Sysreq paths: %s.\n**po/zh_CN contents:\n%s\n**Direct msgfmt output:\n%s**Session info:\n%s",
+          toString(pkg_files), toString(Sys.which(potools:::SYSTEM_REQUIREMENTS)),
+          paste(readLines(file.path(pkg, 'po/zh_CN.po')), collapse='\n'),
+          {
+            out <- tempfile()
+            system2(
+              "msgfmt",
+              c("-o", tempfile(fileext = '.mo'), file.path(pkg, "po/zh_CN.po")),
+              stdout = out, stdin = out, stderr = out
+            )
+            paste(readLines(out), collapse='\n')
+          },
+          paste(capture.output(print(sessionInfo())), collapse = '\n')
+        )
       )
 
       # NB: paste(readLines(), collapse="\n") instead of readChar() for platform robustness
@@ -227,14 +269,14 @@ test_that("Packages with src code work correctly", {
     }
   )
 
-  expect_outputs(
+  expect_all_match(
     prompts,
     c("Rprintf(_(", "warning(_("),
     fixed = TRUE
   )
 
   # error(ngettext(...)) doesn't show error() in check_untranslated_src
-  expect_outputs(
+  expect_all_match(
     prompts,
     "Problematic call",
     invert = TRUE, fixed = TRUE
@@ -253,7 +295,7 @@ test_that("Packages with src code & fuzzy messages work", {
       )
     }
   )
-  expect_outputs(
+  expect_all_match(
     prompts,
     "Note: a similar message was previously translated as",
     fixed = TRUE
@@ -343,14 +385,14 @@ test_that("use_base_rules=FALSE produces our preferred behavior", {
       # (4) source tagging
       # (5) splitting at newlines
       # (6) msgid quote escaping
-      # (7)-(8) copyright
+      # (7) copyright
       expect_all_match(
         r_pot_lines,
         c(
           "SOME DESCRIPTIVE TITLE", "Language: \\n", "nplurals=INTEGER",
           'msgid "singular "', '#: foo.R', '"\\\\n vs \\n"',
           '"strings with escaped \\"quotes\\"',
-          'Copyright (C) YEAR Mata Hari', '"Copyright: Mata Hari\\n"'
+          'Copyright (C) YEAR Mata Hari'
         ),
         fixed = TRUE
       )
@@ -499,5 +541,20 @@ test_that("translation of 'base' works correctly", {
         fixed = TRUE
       )
     }
+  )
+})
+
+test_that("max_translations works as expected", {
+  prompts <- restore_package(
+    pkg <- test_package("r_msg"),
+    tmp_conn = mock_translation('test-translate-package-r_msg-1.input'),
+    {
+      translate_package(pkg, 'es', max_translations = 1L, diagnostics = NULL)
+    }
+  )
+  expect_all_match(
+    prompts,
+    "Oh no you don't!",
+    fixed = TRUE, invert = TRUE
   )
 })

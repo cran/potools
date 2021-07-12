@@ -3,14 +3,18 @@ test_that("Packages with src code & C syntax errors fail gracefully", {
     get_message_data(test_package("r_src_err_1")),
     "Parsing error: found an odd number (3)", fixed = TRUE
   )
-  expect_error(
-    get_message_data(test_package("r_src_err_2")),
-    "Parsing error: unmatched parentheses", fixed = TRUE
-  )
-  expect_error(
-    get_message_data(test_package("r_src_err_3")),
-    "Parsing error: unmatched parentheses", fixed = TRUE
-  )
+  # TODO(#209): reactivate these. See discussion in #199 -- for now, the simplest
+  #   way forward is to accept some misbehavior on erroneous C files that won't parse,
+  #   and leave it to users to get their C files compiling first before running
+  #   get_message_data().
+  # expect_error(
+  #   get_message_data(test_package("r_src_err_2")),
+  #   "Parsing error: unmatched parentheses", fixed = TRUE
+  # )
+  # expect_error(
+  #   get_message_data(test_package("r_src_err_3")),
+  #   "Parsing error: unmatched parentheses", fixed = TRUE
+  # )
 })
 
 test_that("Partially named messaging arguments are an error", {
@@ -71,7 +75,8 @@ test_that("faulty custom_translation_functions specs error", {
       test_package("custom_translation"),
       custom_translation_functions = list(R = "abc")
     ),
-    "All inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.", fixed = TRUE
+    "All inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.",
+    fixed = TRUE
   )
 
   expect_error(
@@ -79,7 +84,8 @@ test_that("faulty custom_translation_functions specs error", {
       test_package("custom_translation"),
       custom_translation_functions = list(R = "abc:def:ghi")
     ),
-    "All inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.", fixed = TRUE
+    "All inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.",
+    fixed = TRUE
   )
 
   expect_error(
@@ -87,6 +93,38 @@ test_that("faulty custom_translation_functions specs error", {
       test_package("custom_translation"),
       custom_translation_functions = list(R = "abc:def")
     ),
-    "All inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.", fixed = TRUE
+    "All inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.",
+    fixed = TRUE
   )
+})
+
+test_that("Message exclusions are respected", {
+  expect_all_match(
+    get_message_data(test_package("r_msg"))$msgid,
+    c("skip me for translation", "me too", "me three"),
+    fixed = TRUE, invert = TRUE
+  )
+
+  # C-level exclusions
+  expect_all_match(
+    get_message_data(test_package("r_src_c"))$msgid,
+    c("Watch me disappear", "Like a ghost", "Into thin air"),
+    fixed = TRUE, invert = TRUE
+  )
+
+  # mismatch of start/end counts in a file
+  expect_error(
+    get_message_data(test_package("r_err_1")),
+    "Invalid # notranslate start/end.*start\\(s\\)"
+  )
+  # end comes before start, so there's a mismatch even if the counts are the same
+  expect_error(
+    get_message_data(test_package("r_err_2")),
+    "Invalid # notranslate start/end.*Unmatched"
+  )
+})
+
+test_that("Pre-processor macros don't break parentheses matching", {
+  # solution is hacky, but this test at least helps prevent regression going forward
+  expect_equal(get_message_data(test_package("unusual_msg"))[file == 'z.c']$msgid, "You found me!")
 })
