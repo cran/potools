@@ -1,8 +1,25 @@
 # split off from tools::update_pkg_po() to only run the msgmerge & checkPoFile steps
-run_msgmerge = function(po_file, pot_file) {
-  if (system(sprintf("msgmerge --update %s %s", po_file, shQuote(pot_file))) != 0L) {
+
+# https://www.gnu.org/software/gettext/manual/html_node/msgmerge-Invocation.html
+# https://docs.oracle.com/cd/E36784_01/html/E36870/msgmerge-1.html#scrolltoc
+run_msgmerge <- function(po_file, pot_file, previous = FALSE, verbose = TRUE) {
+  check_potools_sys_reqs("msgmerge")
+  args <- c(
+    "--update", shQuote(path.expand(po_file)),
+    "--backup=off",
+    if (previous) "--previous", #show previous match for fuzzy matches
+    shQuote(path.expand(pot_file))
+  )
+
+  if (verbose) {
+    message("Running system command msgmerge ", paste(args, collapse = " "), "...")
+  }
+  val <- system2("msgmerge", args, stdout = TRUE, stderr = TRUE)
+  if (!identical(attr(val, "status", exact = TRUE), NULL)) {
     # nocov these warnings? i don't know how to trigger them as of this writing.
-    warningf("Running msgmerge on '%s' failed.", po_file)
+    warningf("Running msgmerge on './po/%s' failed:\n  %s", basename(po_file), paste(val, collapse = "\n"))
+  } else if (verbose) {
+    messagef(paste(val, collapse = "\n"))
   }
 
   res <- tools::checkPoFile(po_file, strictPlural = TRUE)
@@ -14,12 +31,21 @@ run_msgmerge = function(po_file, pot_file) {
 }
 
 run_msgfmt = function(po_file, mo_file, verbose) {
+  check_potools_sys_reqs("msgfmt")
   use_stats <- if (verbose) '--statistics' else ''
-  # See #218. Solaris msgfmt doesn't support -c or --statistics
-  if (Sys.info()[["sysname"]] == "SunOS") {
-    cmd = sprintf("msgfmt -o %s %s", shQuote(mo_file), shQuote(po_file)) # nocov
+
+  po_file <- path.expand(po_file)
+  mo_file <- path.expand(mo_file)
+
+  # See #218, #221. Solaris msgfmt doesn't support -c or --statistics
+  #   see also https://bugs.r-project.org/show_bug.cgi?id=18150
+  if (is_gnu_gettext()) {
+    cmd = glue("msgfmt -c {use_stats} -o {shQuote(mo_file)} {shQuote(po_file)}")
   } else {
-    cmd = sprintf("msgfmt -c %s -o %s %s", use_stats, shQuote(mo_file), shQuote(po_file))
+    cmd = glue("msgfmt -o {shQuote(mo_file)} {shQuote(po_file)}") # nocov
+  }
+  if (verbose) {
+    message("Running system command ", cmd, "...")
   }
   if (system(cmd) != 0L) {
     warningf(
@@ -31,29 +57,8 @@ run_msgfmt = function(po_file, mo_file, verbose) {
   return(invisible())
 }
 
-update_mo_files = function(dir, package, verbose) {
-  inst_dir <- file.path(dir, "inst", "po")
-  lang_regex <- "^(R-)?([a-zA-Z_]+)\\.po$"
-
-  po_files <- list.files(file.path(dir, "po"), pattern = "\\.po$")
-  languages <- gsub(lang_regex, "\\2", po_files)
-  mo_files <- gsub(lang_regex, sprintf("\\1%s.mo", package), po_files)
-  mo_dirs <- file.path(inst_dir, languages, "LC_MESSAGES")
-  # NB: dir.create() only accepts one directory at a time...
-  for (mo_dir in unique(mo_dirs)) dir.create(mo_dir, recursive = TRUE, showWarnings = FALSE)
-
-  for (ii in seq_along(po_files)) {
-    run_msgfmt(
-      po_file = file.path(dir, "po", po_files[ii]),
-      mo_file = file.path(mo_dirs[ii], mo_files[ii]),
-      verbose = verbose
-    )
-  }
-
-  return(invisible())
-}
-
 update_en_quot_mo_files <- function(dir, verbose) {
+  check_potools_sys_reqs(c("msgfmt", "msginit", "msgconv"))
   pot_files <- list.files(file.path(dir, "po"), pattern = "\\.pot$", full.names = TRUE)
   mo_dir <- file.path(dir, "inst", "po", "en@quot", "LC_MESSAGES")
   dir.create(mo_dir, recursive = TRUE, showWarnings = FALSE)
@@ -67,6 +72,29 @@ update_en_quot_mo_files <- function(dir, verbose) {
       verbose = verbose
     )
     unlink(po_file)
+  }
+  return(invisible())
+}
+
+# https://www.gnu.org/software/gettext/manual/html_node/msginit-Invocation.html
+# https://docs.oracle.com/cd/E36784_01/html/E36870/msginit-1.html#scrolltoc
+run_msginit <- function(po_path, pot_path, locale, width = 80L, verbose = TRUE) {
+  check_potools_sys_reqs("msginit")
+  args <- c(
+    "-i", shQuote(path.expand(pot_path)),
+    "-o", shQuote(path.expand(po_path)),
+    "-l", shQuote(locale),
+    "-w", width,
+    "--no-translator" # don't consult user-email etc
+  )
+  if (verbose) {
+    message("Running system command msginit ", paste(args, collapse = " "), "...")
+  }
+  val <- system2("msginit", args, stdout = TRUE, stderr = TRUE)
+  if (!identical(attr(val, "status", exact = TRUE), NULL)) {
+    stopf("Running msginit on '%s' failed", pot_path)
+  } else if (verbose) {
+    messagef(paste(val, collapse = "\n"))
   }
   return(invisible())
 }

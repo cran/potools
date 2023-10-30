@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Translation for package translators</title>
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Translation for package translators</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(potools)</a></code></pre></div>
+<p>This vignette discusses translation from the perspective of a translator; if you’re a package developer, you might want to start with <code>vignette(&quot;developers&quot;)</code>.</p>
+<p>First of all, thank you for helping out! Providing translations for a package is a fantastic way to contribute and I know that your work is deeply appreciated by the package developer.</p>
+<p>Before you go any further, make sure the that the package has started the process of providing translations by checking that it has <code>po/</code> directory in the package root. If you don’t see that directory, you might want to start by opening an issue to see if the developer is interested in receiving translations.</p>
+<div id="basic-process" class="section level3">
+<h3>Basic process</h3>
+<p>Before we get into the details let’s review the basic process of creating translations:</p>
+<ul>
+<li><p>The package developer runs <code>po_extract()</code> to extract all translatable messages from their R and C code.</p></li>
+<li><p>You call <code>po_create()</code> to generate a <code>.po</code> file for the language you’re translating. A <code>.po</code> file consists of a metadata header and pairs of lines like:</p>
+<pre><code>msgid &quot;This is the message in English&quot;
+msgstr &quot;&quot;</code></pre>
+<p>You then replace each <code>msgstr</code> with the appropriate translation:</p>
+<pre><code>msgid &quot;This is the message in English&quot;
+msgstr &quot;This is the message in another language&quot;</code></pre></li>
+<li><p>Finally, either you or the package developer uses <code>po_compile()</code> to turn the plain text <code>.po</code> files into binary <code>.mo</code> files that are distributed with the package.</p></li>
+</ul>
+<p>The process for updating translations is slightly different, and we’ll come back to it later in the doc.</p>
+</div>
+<div id="translation-basics" class="section level2">
+<h2>Translation basics</h2>
+<p>As a translator, you’ll work primarily with <code>.po</code> files. There’s one (or two) <code>.po</code> file(s) for each language that lives in the <code>po/</code> directory. In the same directory, you’ll also see a <code>.pot</code> file — that’s a template file that contains the list of all translatable strings in the package and is used to generate the <code>.po</code> files for each language.</p>
+<p>Get started by creating a <code>.po</code> for your language by running <code>potools::po_create(&quot;{language code}&quot;)</code>. Next, open that file with your favourite text editor. At the top of the file you’ll see some metadata that looks something like this:</p>
+<pre><code>msgid &quot;&quot;
+msgstr &quot;&quot;
+&quot;Project-Id-Version: potools 0.2.3\n&quot;
+&quot;Report-Msgid-Bugs-To: \n&quot;
+&quot;POT-Creation-Date: 2021-11-06 14:19-0700\n&quot;
+&quot;PO-Revision-Date: 2021-11-06 14:19-0700\n&quot;
+&quot;Last-Translator: Michael Chirico &lt;michaelchirico4@gmail.com&gt;\n&quot;
+&quot;Language-Team: ja\n&quot;
+&quot;Language: ja\n&quot;
+&quot;MIME-Version: 1.0\n&quot;
+&quot;Content-Type: text/plain; charset=UTF-8\n&quot;
+&quot;Content-Transfer-Encoding: 8bit\n&quot;
+&quot;X-Generator: potools 0.2.3\n&quot;</code></pre>
+<p>Begin by updating <code>Last-Translator</code> to your email address; this tells the developer how to reach you (e.g. to ask if you might update your translations when a new version of the package comes out).</p>
+<p>The rest of the file consist of pairs of <code>msgid</code> and <code>msgstr</code> that initially look like this:</p>
+<pre><code>#: translate_package.R:66
+msgid &quot;Running message diagnostics...&quot;
+msgstr &quot;&quot;</code></pre>
+<p>The <code>msgid</code> is the string that appears in the R source code; it could be in an error, warning, message, or just printed to the console. The <code>msgstr</code> is the translated equivalent and it’s your job as a translator to fill out <code>msgstr</code> with the equivalent in your language:</p>
+<pre><code>#: translate_package.R:66
+msgid &quot;Running message diagnostics...&quot;
+msgstr &quot;メッセージ診断中。。。&quot;</code></pre>
+<p>That’s basically it! Just work through the file filling in the translations one by one. If there’s not quite enough context to figure out the best translation you can either look at the source code (using the file number &amp; line reference in the line above <code>msgid</code>) or contact the developer for clarification. (If a message is challenging to translate, it often indicates that the English version might be suboptimal, so most developers will appreciate you reaching out).</p>
+<p>Next we’ll go through the details of a few message variations you might come across, show you how to try out your work, and then finish up by discussing a few extra details that arise when updating the translations for a package, rather than starting from scratch.</p>
+<div id="picking-a-domain-for-diasporic-languages" class="section level3">
+<h3>Picking a domain for diasporic languages</h3>
+<p>What domain should you use when translating Spanish? There’s <code>es_AR</code>, <code>es_BO</code>, <code>es_CL</code>, <code>es_DO</code>, <code>es_HN</code>, … Do you really need to provide a separate translation for Nicaraguan (<code>es_NI</code>) users? No, but you could.</p>
+<p>Typically, you are best off creating one set of translations under the language’s general domain (here, <code>es</code>). Once translations exist for <code>es</code>, users in all of the more specific locales will see the messages for <code>es</code> whenever they exist. If you really do want to provide more regionally-specific error messages (awesome!), you can either (1) create a whole new set of translations for each region or (2) write translations <em>only for the region-specific messages</em>. The latter is how R handles messages that differ on British/American spelling, for example.</p>
+<p>Say a user is running in <code>es_GT</code> and triggers an error. R will first look for a translation into <code>es_GT</code>; if none is defined, it will look for a translation into <code>es</code>. If none is defined again, it will finally fall back to the package’s default language (i.e., whatever language is written in the source code, usually English).</p>
+<p>Note also the advice given in the R Installation and Administration manual (also cited below) – if you are writing Spanish translations, a typical package should use <code>language = &quot;es&quot;</code> to generate Spanish translations for <em>all</em> Spanish domains. If you want to add more regional flair to your messaging, you can do so through supplemental <code>.po</code> files. For example, you can add some Argentinian messages to <code>es_AR</code>; users running R in the <code>es_AR</code> locale will see messages specifically written for <code>es_AR</code> first; absent that, the <code>es</code> message will be shown; and absent that, the default message (i.e., in the language written in the source code, usually English).</p>
+<p>Chinese is a slightly different case – typically, the <code>zh_CN</code> domain is used to write with simplified characters while <code>zh_TW</code> is used for traditional characters. In principal you could leverage <code>zh_TW</code> for Taiwanisms and <code>zh_HK</code> for Hongkieisms.</p>
+</div>
+</div>
+<div id="message-variations" class="section level2">
+<h2>Message variations</h2>
+<p>The following sections describe four important message variations:</p>
+<ul>
+<li>Messages that use <code>glue()</code></li>
+<li>Messages that use <code>sprintf()</code></li>
+<li>Multi-line messages</li>
+<li>Plurals</li>
+</ul>
+<div id="glue" class="section level3">
+<h3><code>glue()</code></h3>
+<p>You can tell if message uses <a href="https://glue.tidyverse.org">glue</a> because it will contain pairs of braces: <code>{}</code><a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>. glue evaluates any R code in between <code>{}</code> and inserts the results into the string:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">name &lt;-<span class="st"> &quot;Michael&quot;</span></a>
+<a class="sourceLine" id="cb7-2" title="2">glue<span class="op">::</span><span class="kw">glue</span>(<span class="st">&quot;Hi {name}!&quot;</span>)</a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="co">#&gt; Hi Michael!</span></a></code></pre></div>
+<p>The code above would generate the following in the <code>.po</code> file:</p>
+<pre><code>msgid: &quot;Hi {name}!&quot;
+msgstr: &quot;&quot;</code></pre>
+<p>The main thing to remember when translating glue strings is not to translate the contents of <code>{}</code> since that is the name of a variable in the code:</p>
+<pre><code>msgid: &quot;Hi {name}!&quot;
+msgstr: &quot;こんにちは {name}！&quot;</code></pre>
+</div>
+<div id="sprintf" class="section level3">
+<h3><code>sprintf()</code></h3>
+<p>You can tell if a message uses <code>sprintf()</code> because it will contain a format specifier like <code>%s</code> (a string), <code>%i</code> (an integer), or <code>%f</code> (a floating point number). When called, <code>sprintf()</code> replaces these placeholders with values:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">name &lt;-<span class="st"> &quot;Michael&quot;</span></a>
+<a class="sourceLine" id="cb10-2" title="2"><span class="kw">sprintf</span>(<span class="st">&quot;Hi %s!&quot;</span>, name)</a>
+<a class="sourceLine" id="cb10-3" title="3"><span class="co">#&gt; [1] &quot;Hi Michael!&quot;</span></a></code></pre></div>
+<p>This would generate the following <code>.po</code>:</p>
+<pre><code>msgid: &quot;Hi %s!&quot;
+msgstr: &quot;&quot;</code></pre>
+<p>Which (if you spoke Japanese), you might translate to:</p>
+<pre><code>msgid: &quot;Hi %s!&quot;
+msgstr: &quot;こんにちは %s！&quot;</code></pre>
+<p>If there are multiple interpolated strings, and you need to change their order to make grammatical sense in your language, you can put <code>1$</code>, <code>2$</code> etc. after the <code>%</code> to refer to variable in that position.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1"><span class="kw">sprintf</span>(<span class="st">&quot;%s %s %s&quot;</span>, <span class="st">&quot;first&quot;</span>, <span class="st">&quot;second&quot;</span>, <span class="st">&quot;third&quot;</span>)</a>
+<a class="sourceLine" id="cb13-2" title="2"><span class="co">#&gt; [1] &quot;first second third&quot;</span></a>
+<a class="sourceLine" id="cb13-3" title="3"><span class="kw">sprintf</span>(<span class="st">&quot;%2$s %1$s %3$s&quot;</span>, <span class="st">&quot;first&quot;</span>, <span class="st">&quot;second&quot;</span>, <span class="st">&quot;third&quot;</span>)</a>
+<a class="sourceLine" id="cb13-4" title="4"><span class="co">#&gt; [1] &quot;second first third&quot;</span></a></code></pre></div>
+<p>This can be hard to puzzle out and confusing to read, which is why we recommend that package developers use <code>glue()</code>.</p>
+</div>
+<div id="multi-line-messages" class="section level3">
+<h3>Multi-line messages</h3>
+<p>If the message is very long, it might get wrapped across multiple lines:</p>
+<pre><code>msgid &quot;&quot;
+&quot;Reproducing these messages here for your reference since they might still &quot;
+&quot;provide some utility.&quot;
+msgstr &quot;&quot;</code></pre>
+<p>You don’t need to worry about preserving the line breaks, since the translated version might be shorter or longer than the English version. Just note that each line must start and end with <code>&quot;</code> and that if it doesn’t all fit on one line, the first <code>msgstr</code> should be <code>&quot;&quot;</code>.</p>
+</div>
+<div id="plurals" class="section level3">
+<h3>Plurals</h3>
+<p>Messages that vary based on some count have slightly different form. They begin with the English singular and plural forms:</p>
+<pre><code>msgid &quot;There is {n} cow in the field&quot;
+msgid_plural &quot;There are {n} cows in the field&quot;</code></pre>
+<p>Then are followed by the forms for your language. Depending on your language, you will need to provide somewhere between 1 and 6 translations. For example, Japanese only needs a single form, because the rest of the sentence doesn’t vary based on the number of cows:</p>
+<pre><code>msgid &quot;There is {n} cow in the field&quot;
+msgid_plural &quot;There are {n} cows in the field&quot;
+msgstr[0]: 牧草地に{n}頭牛がいます</code></pre>
+<p>Slovenian has four forms (1, 2, 3-4, everything else) so gets four entries:</p>
+<pre><code>msgid &quot;There is {n} cow in the field&quot;
+msgid_plural &quot;There are {n} cows in the field&quot;
+msgstr[0]: Na polju je {n} krava
+msgstr[1]: Na polju sta {n} kravi
+msgstr[2]: Na polju so {n} krave
+msgstr[3]: Na polju je {n} krav</code></pre>
+<p>(Note the forms are zero-indexed, so they start at 0, not 1.)</p>
+<p>The rules for converting the number to the <code>msgid</code> index are expressed using C-code and can be found at the top of the <code>.po</code> file (look for “plural-forms”). It’s a little tricky to go from the C code to a human description of the cases, but if you’re a native speaker you’re hopefully already familiar with the basic breakdown.</p>
+</div>
+</div>
+<div id="other-issues" class="section level2">
+<h2>Other issues</h2>
+<p>Technical terms are par for the course in R packages; showing users similar terms for the same concept might lead to needless confusion. R recommends using the <a href="https://web.archive.org/web/20230108213934/https://www.isi-web.org/resources/glossary-of-statistical-terms">ISI Multilingual Glossary of Statistical Terms</a> to help overcome this issue.</p>
+</div>
+<div id="trying-out-your-work" class="section level2">
+<h2>Trying out your work</h2>
+<p>If you know how to use the package, you can try out your translations. There are three important steps:</p>
+<ol style="list-style-type: decimal">
+<li>Set the LANGUAGE environment variable to the language you’re translating: <code>Sys.setenv(LANGUAGE = &quot;{language code}&quot;)</code>. (You only need to do this once per session).</li>
+<li>Compile the plain text <code>.po</code> file you’ve been editing to the binary <code>.mo</code> file that R uses by running <code>potools::po_compile()</code>.</li>
+<li>Re-load (with <code>devtools::load_all()</code>) or re-install the package (e.g. using RStudio’s “Install and restart” button).</li>
+</ol>
+<p>You can then work with the package as you usually would and any messages you’ve translated should appear in your language.</p>
+</div>
+<div id="updating-a-package" class="section level2">
+<h2>Updating a package</h2>
+<p>So far we’ve assumed you’re providing the first set of translations for a package. But another common scenario is updating the translations for a new release of the package. To get to this point, the developer will have updated the <code>.pot</code> file and all of the <code>.po</code> files. There are three cases:</p>
+<ul>
+<li><p>A message has been <strong>added</strong>: the <code>msgstr</code> is empty, and you’ll need to fill it in like for the initial translation.</p></li>
+<li><p>A message has been <strong>removed</strong>: old translations are moved to the bottom of the file (so you can still refer to them if they’re needed), and marked as deprecated (using the ??? symbol).</p></li>
+<li><p>A message has <strong>changed</strong>: if it’s a big change, it’ll be treated like an addition and a deletion, but if it’s a small change it might get marked as fuzzy.</p>
+<pre><code>#: build-news.R:285
+#, fuzzy
+msgid &quot;CRAN release: %s&quot;
+msgstr &quot;Versión en CRAN %s&quot;</code></pre>
+<p>TODO: show how the old message shows up.</p>
+<p>You’ll need to double check the translation and remove “fuzzy” once you’re done.</p></li>
+</ul>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Also, the package should have a dependency on <code>glue</code>, probably in Imports, but maybe in Depends or Suggests.<a href="#fnref1" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

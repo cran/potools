@@ -1,6 +1,8 @@
 # Spiritual cousin version of tools::{x,xn}gettext. Instead of iterating the AST
 #   as R objects, do so from the parse data given by utils::getParseData().
-get_r_messages <- function (dir, custom_translation_functions = NULL, is_base = FALSE) {
+get_r_messages <- function(dir, custom_translation_functions = NULL, is_base = FALSE, style = c("base", "explicit")) {
+  style <- match.arg(style)
+
   expr_data <- rbindlist(lapply(parse_r_files(dir, is_base), getParseData), idcol = 'file')
   # R-free package (e.g. a data package) fails, #56
   if (!nrow(expr_data)) return(r_message_schema())
@@ -37,16 +39,27 @@ get_r_messages <- function (dir, custom_translation_functions = NULL, is_base = 
   #   <!-- mix and match those two types indefinitely -->
   #   <OP-RIGHT-PAREN>)</OP-RIGHT-PAREN>
   # </expr>
+  dots_funs <- domain_dots_funs(use_conditions = style == "base")
+  fmt_funs <- domain_fmt_funs(use_conditions = style == "base")
+
   singular_strings = rbind(
-    get_dots_strings(expr_data, DOMAIN_DOTS_FUNS, NON_DOTS_ARGS),
+    get_dots_strings(expr_data, dots_funs, NON_DOTS_ARGS),
     # treat gettextf separately since it takes a named argument, and we ignore ...
-    get_named_arg_strings(expr_data, 'gettextf', c(fmt = 1L), recursive = TRUE),
+    get_named_arg_strings(expr_data, fmt_funs, c(fmt = 1L), recursive = TRUE),
     # TODO: drop recursive=FALSE option now that exclude= is available? main purpose of recursive=
     #   was to block cat(gettextf(...)) usage right?
     get_dots_strings(expr_data, 'cat', c("file", "sep", "fill", "labels", "append"), recursive = FALSE)
   )
-
   plural_strings = get_named_arg_strings(expr_data, 'ngettext', c(msg1 = 2L, msg2 = 3L), plural = TRUE)
+
+  if (style == "explicit") {
+    tr_ <- get_dots_strings(expr_data, 'tr_', character(), recursive = TRUE)
+    tr_n <- get_named_arg_strings(expr_data, 'tr_n', c(singular = 2L, plural = 3L), plural = TRUE)
+
+    singular_strings <- rbind(singular_strings, tr_)
+    plural_strings <- rbind(plural_strings, tr_n)
+  }
+
   # for plural strings, the ordering within lines doesn't really matter since there's only one .pot entry,
   #   so just use the parent's location to get the line number
   plural_strings[ , id := parent]
@@ -91,7 +104,7 @@ get_r_messages <- function (dir, custom_translation_functions = NULL, is_base = 
   msg_files = unique(msg$file)
   if (is_base) {
     paths <- file.path(dir, 'R', msg_files)
-    share_idx <- grepl('^share/R', msg_files)
+    share_idx <- startsWith(msg_files, 'share/R')
     paths[share_idx] <- file.path(dir, '../../..', msg_files[share_idx])
   } else {
     paths <- file.path(dir, 'R', msg_files)
@@ -146,11 +159,14 @@ get_r_messages <- function (dir, custom_translation_functions = NULL, is_base = 
   #   You are trying to join data.tables where %s has 0 columns.
   msg[type == 'singular', 'is_repeat' := duplicated(msgid)]
 
-  known_translators = c(DOMAIN_DOTS_FUNS, 'ngettext', 'gettextf', get_fnames(custom_params))
+  known_translators = c(dots_funs, 'ngettext', fmt_funs, get_fnames(custom_params))
+  if (style == "explicit") {
+    known_translators <- c(known_translators, "tr", "tr_")
+  }
   msg[ , 'is_marked_for_translation' := fname %chin% known_translators]
 
   # TODO: assume custom translators are translated? or maybe just check the regex?
-  msg[ , "is_templated" := fname == "gettextf"]
+  msg[ , "is_templated" := fname %chin% fmt_funs]
   msg[ , "fname" := NULL]
 
   msg[]
@@ -167,6 +183,7 @@ parse_r_files = function(dir, is_base) {
     if (!dir.exists(file.path(r_share_dir, 'R'))) {
       # templated to share with src-side message
       stopf(
+        # nolint next: line_length_linter.
         "Translation of the 'base' package can only be done on a local mirror of r-devel. Such a copy has a file %s at the top level that is required to proceed.",
         "share/R/REMOVE.R"
       )
@@ -192,6 +209,7 @@ parse_r_keywords = function(spec) {
   if (ncol(keyval) != 2L) {
     idx <- if (ncol(keyval) == 1L) seq_along(spec) else which(is.na(keyval$V2))
     stopf(
+      # nolint next: line_length_linter.
       "Invalid custom translator specification(s): %s.\nAll inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.",
       toString(spec[idx])
     )
@@ -203,6 +221,7 @@ parse_r_keywords = function(spec) {
   dots_idx = grepl("^[.]{3}[\\](?:[a-zA-Z0-9._]+,)*[a-zA-Z0-9._]+$", keyval$V2)
   if (any(idx <- !named_idx & !dots_idx & !plural_idx)) {
     stopf(
+      # nolint next: line_length_linter.
       "Invalid custom translator specification(s): %s.\nAll inputs for R must be key-value pairs like fn:arg1|n1[,arg2|n2] or fn:...\\arg1,...,argn.",
       toString(spec[idx])
     )
@@ -212,7 +231,7 @@ parse_r_keywords = function(spec) {
     singular = list(
       dots = lapply(
         which(dots_idx),
-        function(ii) list(
+        function(ii) list( # nolint: brace_linter.
           fname = keyval$V1[ii],
           excluded_args = strsplit(gsub("^[.]{3}[\\]", "", keyval$V2[ii]), ",", fixed = TRUE)[[1L]]
         )
@@ -274,11 +293,24 @@ exclude_untranslated = function(expr_data, comments) {
 #     if (is.null(f_args <- args(f))) next
 #     if (any(names(formals(f_args)) == 'domain')) cat(obj, '\n')
 # }
-DOMAIN_DOTS_FUNS = c("warning", "stop", "message", "packageStartupMessage", "gettext")
+domain_dots_funs <- function(use_conditions = TRUE) {
+  c(
+    "gettext",
+    if (use_conditions) c("stop", "warning", "message", "packageStartupMessage")
+  )
+}
+
+domain_fmt_funs <- function(use_conditions = TRUE) {
+  paste0(domain_dots_funs(use_conditions), "f")
+}
+
+#
 NON_DOTS_ARGS = c("domain", "call.", "appendLF", "immediate.", "noBreaks.")
 
-# for functions (e.g. DOMAIN_DOTS_FUNS) where we extract strings from ... arguments
-get_dots_strings = function(expr_data, funs, arg_names, exclude = c('gettext', 'gettextf', 'ngettext'), recursive = TRUE) {
+# for functions (e.g. domain_dots_funs) where we extract strings from ... arguments
+get_dots_strings = function(expr_data, funs, arg_names,
+                            exclude = c('gettext', 'gettextf', 'ngettext'),
+                            recursive = TRUE) {
   call_neighbors = get_call_args(expr_data, funs)
   call_neighbors = drop_suppressed_and_named(call_neighbors, expr_data, arg_names)
 
@@ -317,8 +349,9 @@ get_named_arg_strings = function(expr_data, fun, args, recursive = FALSE, plural
       idx = shift(token, fill = '') == 'SYMBOL_SUB' & shift(text, fill = '') %chin% names(args)
       if (any(idx) & !all(matched <- names(args) %chin% text[token == 'SYMBOL_SUB'])) {
         stopf(
+          # nolint next: line_length_linter.
           "In line %s of %s, found a call to %s that names only some of its messaging arguments explicitly. Expected all of [%s] to be named. Please name all or none of these arguments.",
-          expr_data[.BY, on = c(id = 'ancestor'), line1[1L]], .BY$file, .BY$fname, toString(names(args))
+          expr_data[.BY, on = c(id = 'ancestor'), line1[1L]], .BY$file, .BY$fname, toString(names(args)[!matched])
         )
       }
       .(id = id[idx])
@@ -459,8 +492,8 @@ build_call = function(lines, comments, params) {
 }
 
 adjust_tabs = function(l) {
-  while((idx <- regexpr("\t", l, fixed = TRUE)) > 0L) {
-    l = sub("\t", strrep(" ", 9L-(idx %% 8L)), l, fixed = TRUE)
+  while ((idx <- regexpr("\t", l, fixed = TRUE)) > 0L) {
+    l = sub("\t", strrep(" ", 9L - (idx %% 8L)), l, fixed = TRUE)
   }
   l
 }
@@ -496,26 +529,30 @@ clean_text = function(x) {
   return(x)
 }
 
-string_schema = function() data.table(
-  file = character(),
-  # needed to build the call
-  parent = integer(),
-  # needed to order the strings correctly within the call
-  id = integer(),
-  fname = character(),
-  msgid = character(),
-  msgid_plural = list()
-)
+string_schema = function() {
+  data.table(
+    file = character(),
+    # needed to build the call
+    parent = integer(),
+    # needed to order the strings correctly within the call
+    id = integer(),
+    fname = character(),
+    msgid = character(),
+    msgid_plural = list()
+  )
+}
 
 # the schema for empty edge cases
-r_message_schema = function() data.table(
-  type = character(),
-  file = character(),
-  msgid = character(),
-  msgid_plural = list(),
-  line_number = integer(),
-  call = character(),
-  is_repeat = logical(),
-  is_marked_for_translation = logical(),
-  is_templated = logical()
-)
+r_message_schema = function() {
+  data.table(
+    type = character(),
+    file = character(),
+    msgid = character(),
+    msgid_plural = list(),
+    line_number = integer(),
+    call = character(),
+    is_repeat = logical(),
+    is_marked_for_translation = logical(),
+    is_templated = logical()
+  )
+}

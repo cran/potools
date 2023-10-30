@@ -12,35 +12,60 @@ get_directory = function(dir) {
 }
 
 # check dir is a package & return its name & version
-get_desc_data = function(dir) {
+get_desc_data = function(dir, fields = c('Package', 'Version')) {
+  stopifnot(length(fields) > 0L)
   desc_file <- file.path(dir, 'DESCRIPTION')
   if (!file.exists(desc_file)) {
     stopf('%s is not a package (missing DESCRIPTION)', normalizePath(dir))
   }
-  desc_data <- read.dcf(desc_file, c('Package', 'Version'))
-  if (nrow(desc_data) != 1L || anyNA(desc_data)) {
+  desc_data <- read.dcf(desc_file, fields)
+  if (missing(fields) && (nrow(desc_data) != 1L || anyNA(desc_data))) {
     stopf('%s is not a package (missing Package and/or Version field in DESCRIPTION)', normalizePath(dir))
   }
-  return(desc_data[1L, ])
+  return(drop(desc_data))
 }
 
 # msgmerge | msgmerge.R | run_msgmerge()
 # msgfmt   | msgmerge.R | run_msgfmt()
-# msginit  | msgmerge.R | tools:::en_quote()
+# msginit  | msgmerge.R | run_msginit(), tools:::en_quote(),
 # msgconv  | msgmerge.R | tools:::en_quote()
 SYSTEM_REQUIREMENTS = c('msgmerge', 'msgfmt', 'msginit', 'msgconv')
 RTOOLS_URL = 'https://www.stats.ox.ac.uk/pub/Rtools/goodies/gettext-tools.zip'
 
 # nocov start. in principal, could do another GH action on an ill-equipped machine?
-check_potools_sys_reqs = function() {
-  if (any(is_missing <- !nzchar(Sys.which(SYSTEM_REQUIREMENTS)))) {
+
+
+#' Check if the proper system utilities for running package translation are
+#' installed
+#'
+#' potools uses the same gettext command line tools that R itself does to run
+#' translation. These are required for translation to work properly; this
+#' function is mainly for testing use & checks whether the current environment
+#' is equipped for translation.
+#'
+#'
+#' Specifically, potools relies on these command-line utilities:
+#'
+#' @param which Which requirements to test for. Defaults to all of
+#'   the command-line utilities on which potools relies, namely,
+#'   * `msgmerge`
+#'   * `msgfmt`
+#'   * `msginit`
+#'   * `msgconv`
+#' @return `TRUE` if the system is ready for translation, otherwise a
+#'   message suggesting how to proceed.
+#' @author Michael Chirico
+#' @seealso [tools::update_pkg_po()]
+#' @export
+check_potools_sys_reqs = function(which = SYSTEM_REQUIREMENTS) {
+  if (any(is_missing <- !nzchar(Sys.which(which)))) {
     if (.Platform$OS.type == 'windows') {
       platform_msg = gettextf(
         'These tools are available as an Rtools goodie, check %s',
         RTOOLS_URL
       )
     } else if (Sys.info()['sysname'] == 'Darwin') {
-        platform_msg = gettext('These GNU tools are commonly available, try installing from brew or apt-get')
+      platform_msg = gettext('These GNU tools are commonly available, try installing from brew or apt-get')
     } else {
       platform_msg = gettext(
         'These GNU tools are commonly available from the Linux package manager for your system'
@@ -48,14 +73,14 @@ check_potools_sys_reqs = function() {
     }
     return(gettextf(
       'Missing (or not on PATH) system requirements %s.\n%s',
-      toString(SYSTEM_REQUIREMENTS[is_missing]), platform_msg
+      toString(which[is_missing]), platform_msg
     ))
   }
   return(TRUE)
 }
 # nocov end
 
-list_package_files = function(dir, subdir, subsubdirs = character(), pattern) {
+list_package_files = function(dir, subdir, subsubdirs = character(), pattern = NULL) {
   subdir = file.path(dir, subdir)
   files = list.files(subdir, pattern = pattern)
   for (subsubdir in subsubdirs) {
@@ -91,10 +116,7 @@ gettextify = function(e, sep = '') {
     fmt = paste0(paste0(fmt[-length(fmt)], sep, collapse = ''), fmt[length(fmt)])
   }
 
-  sprintf(
-    '%s("%s"%s)',
-    call_nm, fmt, dots
-  )
+  glue('{call_nm}("{fmt}"{dots})')
 }
 
 # regex for sprintf templates is taken from a thorough reading of ?sprintf,
@@ -153,3 +175,18 @@ get_lang_metadata = function(language) {
   }
   update_metadata(language)
 }
+
+# Vectorised version of dir.create
+dir_create <- function(dirs) {
+  for (dir in unique(dirs)) {
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  }
+}
+
+is_outdated <- function(src, dst) {
+  !file.exists(dst) | (file.mtime(src) > file.mtime(dst))
+}
+
+is_testing = function() identical(Sys.getenv("TESTTHAT"), "true")
+
+is_gnu_gettext = function() any(grepl("GNU gettext", system('gettext --version', intern=TRUE), fixed = TRUE))
